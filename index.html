@@ -34,8 +34,8 @@ body::before{content:'';position:fixed;inset:0;background:
 .map-overlay.visible{display:block;}
 .map-overlay img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;}
 .scene2-guide{position:fixed;top:14px;left:20px;right:20px;z-index:21;max-width:440px;margin:0 auto;text-align:center;font-size:11px;line-height:1.6;color:rgba(255,255,255,0.78);background:rgba(8,8,15,0.66);border:1px solid rgba(255,255,255,0.08);border-radius:3px;padding:7px 10px;backdrop-filter:blur(8px);pointer-events:none;}
-.hotspot{position:absolute;transform:translate(-50%,-50%);border:1px solid rgba(255,255,255,0.18);background:rgba(8,8,15,0.08);border-radius:50%;pointer-events:auto;cursor:pointer;touch-action:manipulation;}
-.hotspot:active{background:rgba(184,115,51,0.22);border-color:rgba(184,115,51,0.75);}
+.hotspot{position:absolute;transform:translate(-50%,-50%);border:1px solid transparent;background:transparent;border-radius:50%;pointer-events:auto;cursor:pointer;touch-action:manipulation;}
+.hotspot:active{background:rgba(184,115,51,0.12);border-color:rgba(184,115,51,0.55);}
 .hotspot-child{left:7%;top:51%;width:105px;height:150px;}
 .hotspot-sign{left:42%;top:43%;width:72px;height:86px;}
 .hotspot-dog{left:89%;top:41%;width:90px;height:105px;}
@@ -683,7 +683,7 @@ function setupScene2Hotspots(){
   const spots=[
     ['hotspot-child','声をかける',()=>{ G.talkedChild=true; s2_talkChild(); }],
     ['hotspot-flowerbed','周囲を探す',()=>{ G.searchedFlowerbed=true; s2_lookAround(); }],
-    ['hotspot-fragment','工具で修理する',()=>{ G.hasToyFragment=true; G.repairedToy=true; s2_repair(); }],
+    ['hotspot-fragment','工具で修理する',()=>{ G.hasToyFragment=true; G.repairedToy=true; el('log2speaker').textContent=''; el('log2text').textContent='おもちゃの欠片を手に入れた'; el('log2sub').textContent=''; setTimeout(s2_repair,500); }],
     ['hotspot-dog','足跡を追う',()=>{ G.followedFootprints=true; s2_footprint(); }],
     ['hotspot-footprints','足跡を追う',()=>{ G.followedFootprints=true; s2_footprint(); }],
     ['hotspot-sign','案内板',()=>s2_signboard()],
