@@ -30,6 +30,13 @@ body::before{content:'';position:fixed;inset:0;background:
 #mapOverlay .map-hit:focus{outline:none;}
 #mapOverlay .map-hit::after{content:'';position:absolute;inset:0;border-radius:50%;}
 
+/* ── SCENE 2 探索ホットスポット ── */
+.scene2-hotspots{position:absolute;inset:0;z-index:30;pointer-events:none;}
+.scene2-hotspot{position:absolute;display:block;padding:0;margin:0;border:0;background:transparent;pointer-events:auto;cursor:pointer;-webkit-appearance:none;}
+.scene2-hotspot:focus{outline:none;}
+.scene2-hotspot::after{content:'';position:absolute;inset:0;border-radius:50%;}
+.scene2-tutorial{position:absolute;top:72px;left:20px;right:20px;z-index:21;max-width:440px;margin:0 auto;padding:10px 14px;border:1px solid rgba(255,255,255,0.08);border-radius:4px;background:rgba(8,8,15,0.72);backdrop-filter:blur(8px);font-size:11px;letter-spacing:0.08em;text-align:center;color:var(--text-dim);pointer-events:none;}
+
 /* ── SCREEN（旧版方式：fixed全画面・下寄せ）── */
 .screen{display:none;position:fixed;inset:0;z-index:10;flex-direction:column;align-items:center;justify-content:flex-end;padding:0 0 32px;overflow:hidden;}
 .screen.active{display:flex;}
@@ -239,6 +246,15 @@ body::before{content:'';position:fixed;inset:0;background:
 <div class="screen" id="scn2">
   <div class="ambient" id="amb2"></div>
   <span class="bg-word">FOUNTAIN</span>
+  <div class="scene2-tutorial">気になる場所をタップして、調べてみよう。</div>
+  <div class="scene2-hotspots" id="scene2Hotspots" aria-label="噴水公園の探索場所">
+    <button class="scene2-hotspot" id="hotspotChild" aria-label="子どもに声をかける" onclick="s2_talkChild();event.stopPropagation();"></button>
+    <button class="scene2-hotspot" id="hotspotFlowerbed" aria-label="花壇を調べる" onclick="s2_lookAround();event.stopPropagation();"></button>
+    <button class="scene2-hotspot" id="hotspotToy" aria-label="おもちゃの欠片を調べる" onclick="s2_repair();event.stopPropagation();"></button>
+    <button class="scene2-hotspot" id="hotspotDog" aria-label="犬を調べる" onclick="s2_footprint();event.stopPropagation();"></button>
+    <button class="scene2-hotspot" id="hotspotFootprints" aria-label="足跡を調べる" onclick="s2_footprint();event.stopPropagation();"></button>
+    <button class="scene2-hotspot" id="hotspotSignboard" aria-label="看板を調べる" onclick="inspectSignboard();event.stopPropagation();"></button>
+  </div>
   <div class="log-box">
     <div class="log-scene">SCENE 02 &nbsp;／&nbsp; 噴水公園</div>
     <div class="log-speaker" id="log2speaker">子ども</div>
@@ -549,6 +565,32 @@ function positionSignboardHit(img, hit){
   hit.style.width=(w*scale)+'px';
   hit.style.height=(h*scale)+'px';
 }
+function positionScene2Hotspots(){
+  const img=el('mapOverlay').querySelector('.map-image');
+  if(!img) return;
+  const cw=img.clientWidth, ch=img.clientHeight;
+  const iw=img.naturalWidth, ih=img.naturalHeight;
+  if(!cw||!ch||!iw||!ih) return;
+  const scale=Math.max(cw/iw, ch/ih);
+  const rw=iw*scale, rh=ih*scale;
+  const ox=(cw-rw)/2, oy=(ch-rh)/2;
+  const hits={
+    hotspotChild:[42,500,170,390],
+    hotspotFlowerbed:[552,820,312,390],
+    hotspotToy:[330,940,150,120],
+    hotspotDog:[640,470,180,310],
+    hotspotFootprints:[470,640,230,360],
+    hotspotSignboard:[292,490,126,136],
+  };
+  Object.entries(hits).forEach(([id,[x,y,w,h]])=>{
+    const hit=el(id); if(!hit) return;
+    hit.style.left=(ox+x*scale)+'px';
+    hit.style.top=(oy+y*scale)+'px';
+    hit.style.width=(w*scale)+'px';
+    hit.style.height=(h*scale)+'px';
+  });
+}
+
 function inspectSignboard(){
   const text='この街では、最初のエコアを噴水に捧げる者がいる。';
   el('log1speaker').textContent='看板';
@@ -565,12 +607,12 @@ function showMap(key){
   const m=el('mapOverlay');
   if(!key||!MAPS[key]){ m.classList.remove('visible'); m.innerHTML=''; return; }
   const interactive=['scn1','scn2','scn2b'].includes(document.querySelector('.screen.active')?.id);
-  m.innerHTML=`<img class="map-image" src="${MAPS[key]}"><button class="map-hit" aria-label="看板を調べる" onclick="inspectSignboard();event.stopPropagation();"></button>`;
+  m.innerHTML=`<img class="map-image" src="${MAPS[key]}">`;
   m.classList.add('visible');
   const img=m.querySelector('.map-image');
-  const hit=m.querySelector('.map-hit');
-  hit.style.display=interactive?'block':'none';
-  const position=()=>positionSignboardHit(img,hit);
+  const position=()=>{
+    if(interactive && document.querySelector('.screen.active')?.id==='scn2') positionScene2Hotspots();
+  };
   if(img.complete) position(); else img.onload=position;
   window.addEventListener('resize',position,{passive:true});
 }
@@ -579,6 +621,7 @@ function hideMap(){ el('mapOverlay').classList.remove('visible'); }
 const G = {
   ecoa: 0, hasBread: false, hasCrystal: false,
   helpedChild: false, threwEcoa: false,
+  childTalked: false, searchedFlowerbed: false, repairedToy: false, followedFootprints: false,
   tookDetour: false, leftChild: false,
   phaseTriggered: false, diagResult: null,
   battleChoice: null,
@@ -697,12 +740,9 @@ function dismissTouch(){ el('touchOverlay').classList.remove('active'); el('log1
 function goScene2(){
   showScreen('scn2'); spawnParticles('amb2',4); showMap('fountain');
   renderChoices('choices2',[
-    ['声をかける', ()=>s2_talkChild()],
-    ['周囲を探す', ()=>s2_lookAround()],
-    ['工具で修理する', ()=>s2_repair(), false, '持っているものを使う'],
-    ['足跡を追う', ()=>s2_footprint(), false, '地面に何かの跡がある'],
     ['今は立ち去る', ()=>s2_leaveChild()],
   ]);
+  requestAnimationFrame(positionScene2Hotspots);
 }
 
 function goScene2b(steps){
@@ -733,6 +773,7 @@ function advance2b(){
 }
 
 function s2_talkChild(){
+  G.childTalked=true;
   goScene2b([
     {sp:'', tx:'あなたは子どもに声をかけた。', sub:'「大丈夫。何をなくしたの？」'},
     {sp:'子ども', tx:'「これの、もう片方。さっきまであったのに」', sub:'壊れた玩具を見せる。'},
@@ -751,6 +792,7 @@ function s2_talkChild(){
 }
 
 function s2_lookAround(){
+  G.searchedFlowerbed=true;
   goScene2b([
     {sp:'', tx:'あなたは周囲を見渡した。', sub:'花壇。ベンチ。屋台の木箱。噴水の縁。'},
     {sp:'', tx:'風が吹いた時、花壇の奥で小さな金属片が光った。', sub:'', next: s2_pickUp},
@@ -758,6 +800,7 @@ function s2_lookAround(){
 }
 
 function s2_repair(){
+  G.repairedToy=true;
   G.helpedChild=true; G.hasCrystal=true;
   goScene2b([
     {sp:'', tx:'あなたは持っていた工具を取り出した。', sub:'壊れた玩具の構造を見る。単純な留め具の外れだ。'},
@@ -772,6 +815,7 @@ function s2_repair(){
 }
 
 function s2_footprint(){
+  G.followedFootprints=true;
   G.helpedChild=true; G.hasCrystal=true;
   goScene2b([
     {sp:'', tx:'地面に、小さな足跡が続いている。', sub:'人のものではない。四本足。小さな動物だ。'},
